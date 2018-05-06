@@ -1,37 +1,123 @@
 #! python3
 
-## This program uses gui automation to automate the closure and resolution of work orders within a medical equipment management system
+## This program uses gui automation to perform work order processing operations within Agilis. Agilis is a Medical Equipment
+## Management software built off of the ServiceNow platform. 
+## The program can be inititated once the user is logged in and viewing a work order listing. 
 
-	
-## Work Flow for recognizing the No Billable Dollars Alert
-## 1) Find the billable alert  2) Click the OK button  3) Scroll down 4) Find the "Total Billable Amount" header
-## 5) Click just below the header  6) Drag and highlight the text in the field 7)Copy to clip board and compare with $0.00
-## 8) If not zero click on the exclamation point at the same Y axis  9) If zero, move slightly down under the "Total Billable Amount Header"
-## 10) Click on the next available amount field and perform steps 6-8
 
 import pyautogui, sys, time, datetime, pyperclip, webbrowser
 
 
+
 phase = 0
 
-def cycle(phase):  ## Provides visual feedback of distinct program phases in console window for review and troubleshooting purposes
+def cycle(phase, space = 76, character = "*"):
+"""Provides visual feedback of distinct program phases in console window for review and troubleshooting purposes."""
+
+
     phase = int(phase)
     if phase == 0:
         Start = "START"
-        print(Start.center(100, "-"))
+        print(Start.center(space, character))
     elif 0 < phase < 4:
         Sequence = "PHASE_" + str(phase)
-        print(Sequence.center(100, "-"))
+        print(Sequence.center(space, character))
     else:
         Complete = "COMPLETE"
-        print(Complete.center(100, "-"))
+        print(Complete.center(space, character))
+
+  
+def referenceImage (image, x_adj = 0, y_adj = 0):
+"""Takes a given image and returns a reference point relative to that image based on the x and y coordinate adjustments provided."""
+
+    refStartPoint = pyautogui.locateOnScreen("{0}.png".format(image), grayscale=True)
+    while refStartPoint == None:
+        refStartPoint = pyautogui.locateOnScreen("{0}.png".format(image))
+        print("Searching for {0}...".format(image))
+
+    refStartPoint_X, refStartPoint_Y = pyautogui.center(refStartPoint)
+    refLocation = (refStartPoint_X + x_adj, refStartPoint_Y + y_adj)
+    return refLocation
+    
+
+def chooseImage (image_1, image_2):
+"""Searches for the appearence of two potential images and returns the location of the one that appears.""" 
+    
+    imageLocation_1 = pyautogui.locateCenterOnScreen("{0}.png".format(image_1), grayscale=True)
+    imageLocation_2 = pyautogui.locateCenterOnScreen("{0}.png".format(image_2), grayscale=True)
+    while imageLocation_1 == None and imageLocation_2 == None:
+        imageLocation_1 = pyautogui.locateCenterOnScreen("{0}.png".format(image_1), grayscale=True)
+        imageLocation_2 = pyautogui.locateCenterOnScreen("{0}.png".format(image_2), grayscale=True)
+        print("Searching for {0} or {1}...".format(image_1, image_2))
+    if imageLocation_1 != None:
+        return imageLocation_1
+    elif imageLocation_2 != None:
+        return imageLocation_2
+               
+
+def findImage (image):
+"""Finds a given image on screen and returns the coordinates of the center point of that image."""
+
+    imageLocation = pyautogui.locateCenterOnScreen("{0}.png".format(image), grayscale=True)
+    while imageLocation == None:
+        
+        imageLocation = pyautogui.locateCenterOnScreen("{0}.png".format(image), grayscale=True)
+        print("Searching for {0}...".format(image))
+        
+    return imageLocation
+
+def ConditionalImageSearch (image1, image2):
+"""Searches for image that only occurs when certain conditions are met. Returns alternate values based on if given conditional image appears or not."""
+
+    for i in range (0,3):
+        ConditionalImage1Location = pyautogui.locateCenterOnScreen("{0}.png".format(image1), grayscale=True)
+
+     
+    if ConditionalImage1Location == None: #changed from else to elif 4/30/2018 - Alert is not found
+        print("{} not found".format(image1))
+        return 8 # (An 8 is returned wether the alert image shows or not. 
+
+
+    elif ConditionalImage1Location != None: # Alert is found
+   
+        printImageLocation((image1), (ConditionalImage1Location))
+        pyautogui.moveTo(ConditionalImage1Location)
+        ConditionalImage2Location = pyautogui.locateCenterOnScreen("{0}.png".format(image2), grayscale=True)
+        printImageLocation((image2), (ConditionalImage2Location))
+        pointAndClick(ConditionalImage2Location, 1)
+        return 5 # (Previously "0" Problem: Found image is returning a 1. Though the steps of this condition
+        # are being executed, I can not get it to return the value    
+
+def printImageLocation (imageName, coordinates):
+""" Prints the coordinates of a selected image to the console screen for tracking and troubleshooting purposes."""
+
+    print("Center of {0} is {1}".format(imageName, coordinates))
+    return
+
+def pointAndClick (coordinates, clickCount):
+"""Moves mouse to given coordinates and clicks on the desired location."""
+
+    pyautogui.moveTo(coordinates)
+    pyautogui.click(clicks=clickCount)
+    time.sleep(0.5) # Pausing less than .5 seconds increases liklihood of program errors. 
+    return
+
+def scrollDown ():
+"""Performs a downward scrolling operations specific to the needs of the program within the Agilis window."""
+
+    pyautogui.moveTo(1591,274)
+    time.sleep(0.7)
+    pyautogui.click(clicks=1)
+    time.sleep(0.5)
+    pyautogui.dragTo(1591, 480, 2, button='left') #Changed y coordinates from 505 to 480 because scrolled too far at times
+    time.sleep(0.5)
+    return
 
 cycle(phase) ##Start
 
 now = datetime.datetime.now()
 print(str(now))
-Start_Time = time.time()
-print(Start_Time)
+
 
 phase +=1 ##Phase 1
 cycle(phase) 
@@ -39,221 +125,140 @@ cycle(phase)
 
 Entry_Date = (now.strftime("%m/%d/%Y")) ## This selects a report period dating back to the beginning of the present month
 print("Entry Date = " + Entry_Date)
-File_Name = (now.strftime("%m%d%Y_Incomplete_PMs"))
+
 
 
 phase +=1 ##Phase 2
 cycle(phase)
 
+promptData = pyautogui.prompt(text='How Many Work Order Update Sessions do you want to run?', title='WORK ORDER COUNT' , default='5') ## Added 4/25/2018 @ 9:17 PM
+type(promptData)
+print("{} work order sessions requested".format(promptData))
+Start_Time = time.time()
+print(Start_Time)
+
 session = 0
+Total_Concession_Amount = 0
 
-for i in range (1, 11):
+for i in range (0, int(promptData)):
 
-    Increment_Session = session + 1
-    print("Starting Session {}".format(Increment_Session))
-    pyautogui.pause = 0.5
-    time.sleep(2.0)
-    pyautogui.moveTo(327,271)
-    pyautogui.click(clicks=1)
-    Work_Order_Reference_Icon = pyautogui.locateOnScreen("Work_Order_Reference_Icon.png", grayscale=True) 
-    while Work_Order_Reference_Icon == None:
-        Work_Order_Reference_Icon = pyautogui.locateOnScreen("Work_Order_Reference_Icon.png", grayscale=True)
-        print("Still searching for Work_Order_Reference_Icon...")
-
-#When program finds image, print the location
-    print("Center of Work_Order_Reference_Icon is located at {0}".format(Work_Order_Reference_Icon))
-    Work_Order_Reference_Icon_X, Work_Order_Reference_Icon_Y = pyautogui.center(Work_Order_Reference_Icon)
-    pyautogui.moveTo(Work_Order_Reference_Icon_X + 110, Work_Order_Reference_Icon_Y)
-    pyautogui.click(clicks=2)
-
-       
-    time.sleep(3.0)
-    pyautogui.moveTo(1591,274)
-    pyautogui.click(clicks=1)
-    time.sleep(0.5)
-    pyautogui.dragTo(1591, 505, 2, button='left')
-    pyautogui.click(clicks=1)  # click in the Start Date Field
-    time.sleep(3.0)
-
-    Work_Order_Itemized_Cost = pyautogui.locateCenterOnScreen("Work_Order_Itemized_Cost.png", grayscale=True) 
-    Work_Order_Itemized_Cost_HL = pyautogui.locateCenterOnScreen("Work_Order_Itemized_Cost_HL.png", grayscale=True) 
-
-    while Work_Order_Itemized_Cost == None and Work_Order_Itemized_Cost_HL == None: 
-        Work_Order_Itemized_Cost = pyautogui.locateCenterOnScreen("Work_Order_Itemized_Cost.png", grayscale=True)
-        Work_Order_Itemized_Cost_HL = pyautogui.locateCenterOnScreen("Work_Order_Itemized_Cost_HL.png", grayscale=True)
-        print("Still searching for Work_Order_Itemized_Cost Buttons...")
-
-           
-    if Work_Order_Itemized_Cost != None:
-            time.sleep(0.5)
-            print("Center of Work_Order_Itemized_Cost is located at {0}".format(Work_Order_Itemized_Cost))
-            pyautogui.moveTo(Work_Order_Itemized_Cost)
-            pyautogui.click(clicks=1)
-
-    elif Work_Order_Itemized_Cost_HL != None:
-            time.sleep(0.5)
-            print("Center of Work_Order_Itemized_Cost_HL is located at {0}".format(Work_Order_Itemized_Cost_HL))
-            pyautogui.moveTo(Work_Order_Itemized_Cost_HL)
-            pyautogui.click(clicks=1)         
-  
-
-    else:
-            print("This just is not working!")    
+    session += 1
+    print("Session {} Initiated".format(session).center(76, "-"))
+        
+    pyautogui.pause = 0.2
+    time.sleep(0.7)
+    pointAndClick((327,271), 1)
     
+    referenceImage("Work_Order_Reference_Icon", 110, 0)
+    Work_Order_Reference_Icon = referenceImage("Work_Order_Reference_Icon", 110, 0)
+    printImageLocation(("Work_Order_Reference_Icon"),(Work_Order_Reference_Icon))
+    pointAndClick((Work_Order_Reference_Icon), 1)
 
-    Exclamation_Point_Icon = pyautogui.locateCenterOnScreen("Exclamation_Point_Icon.png", grayscale=True)
-    while Exclamation_Point_Icon == None:
-        Exclamation_Point_Icon = pyautogui.locateCenterOnScreen("Exclamation_Point_Icon.png", grayscale=True)
-        print("Still searching for Exclamation_Point_Icon...")
+    scrollDown ()
 
-#When program finds image, print the location
-    print("Center of Exclamation_Point_Icon is located at {0}".format(Exclamation_Point_Icon))
-    pyautogui.moveTo(Exclamation_Point_Icon)
-    pyautogui.click(clicks=1)
-    time.sleep(3.0) # changing from 4.0 to 3.0
-    pyautogui.moveTo(895,343)
-    pyautogui.click(clicks=1)
-    Total_Billable_Field = pyautogui.locateCenterOnScreen("Total_Billable_Field.png", grayscale=True)
-    while Exclamation_Point_Icon == None:
-        Total_Billable_Field = pyautogui.locateCenterOnScreen("Total_Billable_Field.png", grayscale=True)
-        print("Still searching for Total_Billable_Field...")
+    chooseImage("Work_Order_Itemized_Cost", "Work_Order_Itemized_Cost_HL")
+    Work_Order_Itemized_Cost = chooseImage("Work_Order_Itemized_Cost", "Work_Order_Itemized_Cost_HL")
+    printImageLocation(("Work_Order_Itemized_Cost"),(Work_Order_Itemized_Cost))
+    pointAndClick((Work_Order_Itemized_Cost), 1)
 
-#When program finds image, print the location
-    print("Center of Total_Billable_Field is located at {0}".format(Total_Billable_Field))
-    pyautogui.moveTo(Total_Billable_Field)
-    pyautogui.click(clicks=2) # 04172018 @ 2:50 PM Changed to 2 clicks.
-    time.sleep(2.0)
+
+    findImage("Exclamation_Point_Icon")
+    Exclamation_Point_Icon = findImage("Exclamation_Point_Icon")
+    printImageLocation(("Exclamation_Point_Icon"),(Exclamation_Point_Icon))
+    pointAndClick((Exclamation_Point_Icon), 1)
+
+    pointAndClick((895,343), 1)
+
+    findImage("Total_Billable_Field")
+    Total_Billable_Field = findImage("Total_Billable_Field")
+    printImageLocation(("Total_Billable_Field"),(Total_Billable_Field))
+    pointAndClick((Total_Billable_Field), 2)
+
+
     pyautogui.hotkey('ctrl', 'a')
     pyautogui.hotkey('ctrl', 'c')
     pyautogui.press(['delete', '0','tab', 'tab', 'tab'])
 
-    time.sleep(1.5)
-
-    Total_Concession_Amount = float(pyperclip.paste())
-    time.sleep(1.5)
-    print(Total_Concession_Amount)
-    time.sleep(1.5)
-    pyperclip.paste()
-    pyautogui.pause = 0.5
-    pyautogui.press(['down', 'down', 'down', 'tab', 'tab', 'down', 'tab'])
-    time.sleep(3.0) # changing from 4.0 to 3.0
-
-    if Total_Concession_Amount == 0.0:
-        Update_Button_Gray = pyautogui.locateCenterOnScreen("Update_Button_Gray.png", grayscale=True)
-        while Update_Button_Gray == None:
-            Update_Button_Gray = pyautogui.locateCenterOnScreen("Update_Button_Gray.png", grayscale=True)
-        print("Still searching for Update_Button_Gray...")
-        pyautogui.moveTo(Update_Button_Gray)
-        pyautogui.click(clicks=1)
-        time.sleep(2.0)
-        pass
-        
-
-    elif Total_Concession_Amount != 0.0:
-        Save_Button_Gray = pyautogui.locateCenterOnScreen("Save_Button_Gray.png", grayscale=True)
-        while Save_Button_Gray == None:
-            Save_Button_Gray = pyautogui.locateCenterOnScreen("Save_Button_Gray.png", grayscale=True)
-        print("Still searching for Save_Button_Gray...")
-        pyautogui.moveTo(Save_Button_Gray)
-        pyautogui.click(clicks=1) # 04172018 @ 2:50 PM Changed to 2 clicks.
-        time.sleep(3.0) # changing from 4.0 to 3.0
-        
-        pyautogui.moveTo(895,343)
-        pyautogui.click(clicks=2) # 04172018 @ 2:50 PM Changed to 2 clicks.
-        Total_Billable_Field = pyautogui.locateCenterOnScreen("Total_Billable_Field.png", grayscale=True)
-        while Total_Billable_Field == None:
-            Total_Billable_Field = pyautogui.locateCenterOnScreen("Total_Billable_Field.png", grayscale=True)
-        print("Still searching for Total_Billable_Field...")
-        print("Center of Total_Billable_Field is located at {0}".format(Total_Billable_Field))
-        time.sleep(1.5)
-        pyautogui.moveTo(Total_Billable_Field)
-        time.sleep(1.5)
-        pyautogui.click(clicks=2)
-        time.sleep(1.5)
-        pyautogui.hotkey('ctrl', 'a')
-        pyautogui.hotkey('ctrl', 'c')
-
-        
-        try:
-            Total_Concession_Amount_Validation = float(pyperclip.paste())
-            time.sleep(2.0)
-            print(Total_Concession_Amount_Validation)
-        except:
-            print("ValueError Alert!")
-            #Error_Alert(text="Please correct, then press 'OK'", title="ValueError Alert:", button='OK')
-            time.sleep(20)
-
-        if Total_Concession_Amount == Total_Concession_Amount_Validation:
-            pass #when I had break here a matching value exited the program...investigating
-
-        else:
-            pyautogui.press(['delete', '0','tab', 'tab', 'tab'])
-            time.sleep(1.0)
-            pyautogui.pause = 0.5
-            pyautogui.press(['tab', 'tab', 'down', 'tab'])
-            time.sleep(2)
-            Update_Button_Gray = pyautogui.locateCenterOnScreen("Update_Button_Gray.png", grayscale=True)
-            while Update_Button_Gray == None:
-                Update_Button_Gray = pyautogui.locateCenterOnScreen("Update_Button_Gray.png", grayscale=True)
-            print("Still searching for Update_Button_Gray...")
-            pyautogui.moveTo(Update_Button_Gray)
-            pyautogui.click(clicks=1)
-
-    time.sleep(2.0)
-    pyautogui.press(['tab', 'tab', 'tab', 'tab', 'tab', 'down', 'down', 'down', 'down', 'down', 'down', 'tab'])
-    time.sleep(2.0)
-
-    Update_Button_Gray_2 = pyautogui.locateCenterOnScreen("Update_Button_Gray_2.png", grayscale=True)
-    while Update_Button_Gray_2 == None:
-        Update_Button_Gray_2 = pyautogui.locateCenterOnScreen("Update_Button_Gray_2.png", grayscale=True)
-        print("Still searching for Update_Button_Gray_2...")
-
-    pyautogui.moveTo(Update_Button_Gray_2)
-    pyautogui.click(clicks=1)
-    time.sleep(3.0) # changing from 4.0 to 3.0
-
-    for i in range (0,4):
-        Resolution_Code_Alert = pyautogui.locateCenterOnScreen("Resolution_Code_Alert.png", grayscale=True)
-        
-    if Resolution_Code_Alert != None:
-        Resolution_Code_Alert = pyautogui.locateCenterOnScreen("Resolution_Code_Alert.png", grayscale=True)
-        print("Center of Resolution_Code_Alert is located at {0}".format(Resolution_Code_Alert))
-        OK_Button_Blue = pyautogui.locateCenterOnScreen("OK_Button_Blue.png", grayscale=True)
-        time.sleep(2.0)
-        pyautogui.moveTo(OK_Button_Blue)
-        pyautogui.click(clicks=1)
-        
-    else:
-        continue
-
-    time.sleep(3.0) # changing from 4.0 to 3.0
-    pyautogui.moveTo(1591,274)
-    pyautogui.click(clicks=1)
-    time.sleep(0.5)
-    pyautogui.dragTo(1591, 505, 2, button='left')
-    time.sleep(1.5)
-    Resolution_Button_Gray = pyautogui.locateCenterOnScreen("Resolution_Button_Gray.png", grayscale=True)
-    while Resolution_Button_Gray == None:
-        Resolution_Button_Gray = pyautogui.locateCenterOnScreen("Resolution_Button_Gray.png", grayscale=True)
-        print("Still searching for Resolution_Button_Gray...")
-            
-
-    pyautogui.moveTo(Resolution_Button_Gray)
-    pyautogui.click(clicks=1)
-    time.sleep(3.0)
-    Resolution_Code_Field = pyautogui.locateCenterOnScreen("Resolution_Code_Field.png", grayscale=True)
-    time.sleep(2.0) # changing from 3.0 to 2.0
-    pyautogui.moveTo(Resolution_Code_Field)
-    pyautogui.click(clicks=2)
-    time.sleep(2.0)
-    pyautogui.pause = 0.5
-    pyautogui.press(['down', 'down', 'down', 'tab'])
-    Update_Button_White = pyautogui.locateCenterOnScreen("Update_Button_White.png", grayscale=True)
-    time.sleep(2.0) # changing from 3.0 to 2.0
-    pyautogui.moveTo(Update_Button_White)
     time.sleep(1.0)
-    pyautogui.click(clicks=1)
-    time.sleep(2.0)
+
+    try:
+        Concession_Amount = float(pyperclip.paste())
+
+
+    except:
+        Concession_Amount = float(pyautogui.prompt(text='Adjust the Total Billable Amount in Agilis and enter the correct amount for concessions here.', title='Type Error' , default='0'))
+        pass
+
+    
+    Total_Concession_Amount += Concession_Amount
+    #time.sleep(1.5)# Not sure if this is needed
+    print("Concession amount is ${:.2f}".format(Concession_Amount))
+    #time.sleep(1.5)
+    pyperclip.paste()
+    pyautogui.pause = 0.2
+    pyautogui.press(['down', 'down', 'down', 'tab', 'tab', 'down', 'tab'])
+    time.sleep(1.0) 
+
+    findImage("Update_Button_Gray") 
+    Update_Button_Gray = findImage("Update_Button_Gray")
+    printImageLocation(("Update_Button_Gray"),(Update_Button_Gray))
+    pointAndClick((Update_Button_Gray), 1)
+
+    findImage("Work_Completed_Selection") 
+    Work_Completed_Selection = findImage("Work_Completed_Selection")
+    printImageLocation(("Work_Completed_Selection"),(Work_Completed_Selection))
+    pointAndClick((Work_Completed_Selection), 1)
+
+    time.sleep(1.0)
+    pyautogui.press(['down', 'down', 'down', 'down', 'down', 'down', 'tab'])
+    time.sleep(0.5)
+    
+
+##    Update_Button_Gray_2 = pyautogui.locateCenterOnScreen("Update_Button_Gray_2.png", grayscale=True)
+##    while Update_Button_Gray_2 == None:
+##        Update_Button_Gray_2 = pyautogui.locateCenterOnScreen("Update_Button_Gray_2.png", grayscale=True)
+##        print("Still searching for Update_Button_Gray_2...")
+
+    findImage("Update_Button_Gray_2") 
+    Update_Button_Gray_2 = findImage("Update_Button_Gray_2")
+    printImageLocation(("Update_Button_Gray_2"),(Update_Button_Gray_2))
+    pointAndClick((Update_Button_Gray_2), 1)
+
+##    pyautogui.moveTo(Update_Button_Gray_2)
+##    pyautogui.click(clicks=1)
+    time.sleep(1.2) # changing from 4.0 to 3.0
+
+    forkInTheRoad = " "
+    forkInTheRoad = ConditionalImageSearch("Manager_Review_Alert", "OK_Button_Blue")
+    print(forkInTheRoad)
+    if forkInTheRoad == 5:
+        pass
+    elif forkInTheRoad == 8:
+        continue
+        
+
+##    for i in range (0,4):
+##        Manager_Review_Alert = pyautogui.locateCenterOnScreen("Manager_Review_Alert.png", grayscale=True)
+##        
+##    if Manager_Review_Alert != None:
+##        Manager_Review_Alert = pyautogui.locateCenterOnScreen("Manager_Review_Alert.png", grayscale=True)
+##        print("Center of Manager_Review_Alert is located at {0}".format(Manager_Review_Alert))
+##        OK_Button_Blue = pyautogui.locateCenterOnScreen("OK_Button_Blue.png", grayscale=True)
+##        time.sleep(2.0)
+##        pyautogui.moveTo(OK_Button_Blue)
+##        pyautogui.click(clicks=1)
+##        
+##    else:
+##        continue
+
+    time.sleep(0.5) 
+
+
+    findImage("Back_Button")
+    Back_Button = findImage("Back_Button")
+    printImageLocation(("Back_Button"),(Back_Button))
+    pointAndClick((Back_Button), 1)
+
     
 phase +=1  ##Phase 3
 cycle(phase)
@@ -263,9 +268,13 @@ pyperclip.copy("") # Clears Clipboard
 print("Clipboard cleared")
 now = datetime.datetime.now()
 print(str(now))
-Run_Time = ((time.time() - Start_Time) / 60)
+Run_Time_Minutes = ((time.time() - Start_Time) / 60)
+Run_Time_Average = float(Run_Time_Minutes) / float(promptData)
 print("Program Run Time = %s seconds " % (time.time() - Start_Time))
-print("Program Run Time = {0} minutes ".format(Run_Time))
+print("Program Run Time = {0} minutes ".format(Run_Time_Minutes))
+print("{0} Work Order sessions completed".format(promptData))
+print("Average Run Time = {0} minutes / session".format(Run_Time_Average))
+print("Total Amount Zeroed = ${:.2f}".format(Total_Concession_Amount))
 
 
 
