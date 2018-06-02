@@ -73,9 +73,9 @@ def ConditionalImageSearch (image1, image2):
         ConditionalImage1Location = pyautogui.locateCenterOnScreen("{0}.png".format(image1), grayscale=True)
 
      
-    if ConditionalImage1Location == None: #changed from else to elif 4/30/2018 - Alert is not found
+    if ConditionalImage1Location == None:
         print("{} not found".format(image1))
-        return 8 # (An 8 is returned wether the alert image shows or not. 
+        return "Proceed to next Work Order Session" 
 
 
     elif ConditionalImage1Location != None: # Alert is found
@@ -87,8 +87,7 @@ def ConditionalImageSearch (image1, image2):
         
         printImageLocation((image2), (ConditionalImage2Location))
         pointAndClick(ConditionalImage2Location, 1)
-        return 5 # (Previously "0" Problem: Found image is returning a 1. Though the steps of this condition
-        # are being executed, I can not get it to return the value    
+        return "Cycle back through this Work Order"    
 
 def printImageLocation (imageName, coordinates):
     """ Prints the coordinates of a selected image to the console screen for tracking and troubleshooting purposes."""
@@ -115,6 +114,22 @@ def scrollDown ():
     time.sleep(0.5)
     return
 
+def identifySession ():
+    """Gathers key work order identifiers and outputs them to the console"""
+    
+    time.sleep(1.5)
+    pyautogui.hotkey('ctrl', 'c')
+    AssetNumber = (pyperclip.paste())
+    print("Asset Number: {}".format(AssetNumber))
+    pyautogui.hotkey('shift', 'tab')
+    time.sleep(1.0)
+    pyautogui.hotkey('ctrl', 'c')
+    WorkOrderNumber = (pyperclip.paste())
+    print("Work Order Number: {}".format(WorkOrderNumber))
+    pyperclip.copy("") # Clears Clipboard
+    print("Clipboard cleared")
+
+
 cycle(phase) ##Start
 
 now = datetime.datetime.now()
@@ -133,11 +148,14 @@ print("Entry Date = " + Entry_Date)
 phase +=1 ##Phase 2
 cycle(phase)
 
-promptData = pyautogui.prompt(text='How Many Work Order Update Sessions do you want to run?', title='WORK ORDER COUNT' , default='5') ## Added 4/25/2018 @ 9:17 PM
+pyperclip.copy("") # Clears Clipboard
+promptData = pyautogui.prompt(text='How Many Work Order Update Sessions do you want to run?', title='WORK ORDER COUNT' , default='5') 
 type(promptData)
 print("{} work order sessions requested".format(promptData))
 Start_Time = time.time()
 print("Start Time = {}".format(Start_Time))
+pyperclip.copy("") # Clears Clipboard
+print("Clipboard cleared")
 
 session = 0
 Total_Concession_Amount = 0
@@ -149,117 +167,102 @@ for i in range (0, int(promptData)):
         
     pyautogui.pause = 0.2
     time.sleep(0.7)
-    pointAndClick((327,271), 1)
+    pointAndClick((327,271), 1) # Creates a home position for mouse cursor on each session
     
-    referenceImage("Work_Order_Reference_Icon", 110, 0)
+
     Work_Order_Reference_Icon = referenceImage("Work_Order_Reference_Icon", 110, 0)
     printImageLocation(("Work_Order_Reference_Icon"),(Work_Order_Reference_Icon))
     pointAndClick((Work_Order_Reference_Icon), 1)
-
-    scrollDown ()
-
-    chooseImage("Work_Order_Itemized_Cost", "Work_Order_Itemized_Cost_HL")
-    Work_Order_Itemized_Cost = chooseImage("Work_Order_Itemized_Cost", "Work_Order_Itemized_Cost_HL")
-    printImageLocation(("Work_Order_Itemized_Cost"),(Work_Order_Itemized_Cost))
-    pointAndClick((Work_Order_Itemized_Cost), 1)
-
-
-    findImage("Exclamation_Point_Icon")
-    Exclamation_Point_Icon = findImage("Exclamation_Point_Icon")
-    printImageLocation(("Exclamation_Point_Icon"),(Exclamation_Point_Icon))
-    pointAndClick((Exclamation_Point_Icon), 1)
-
-    pointAndClick((895,343), 1)
-
-    findImage("Total_Billable_Field")
-    Total_Billable_Field = findImage("Total_Billable_Field")
-    printImageLocation(("Total_Billable_Field"),(Total_Billable_Field))
-    pointAndClick((Total_Billable_Field), 2)
-
-
-    pyautogui.hotkey('ctrl', 'a')
-    pyautogui.hotkey('ctrl', 'c')
-    pyautogui.press(['delete', '0','tab', 'tab', 'tab'])
-
     time.sleep(1.0)
 
-    try:
-        Concession_Amount = float(pyperclip.paste())
+    MultipleBillbablesSameWorkOrder = True
 
-
-    except:
-        Concession_Amount = float(pyautogui.prompt(text='Adjust the Total Billable Amount in Agilis and enter the correct amount for concessions here.', title='Type Error' , default='0'))
-        pass
-
-    
-    Total_Concession_Amount += Concession_Amount
-    #time.sleep(1.5)# Not sure if this is needed
-    print("Concession amount is ${:.2f}".format(Concession_Amount))
-    #time.sleep(1.5)
-    pyperclip.paste()
-    pyautogui.pause = 0.2
-    pyautogui.press(['down', 'down', 'down', 'tab', 'tab', 'down', 'tab'])
-    time.sleep(1.0) 
-
-    findImage("Update_Button_Gray") 
-    Update_Button_Gray = findImage("Update_Button_Gray")
-    printImageLocation(("Update_Button_Gray"),(Update_Button_Gray))
-    pointAndClick((Update_Button_Gray), 1)
-
-    findImage("Work_Completed_Selection") 
-    Work_Completed_Selection = findImage("Work_Completed_Selection")
-    printImageLocation(("Work_Completed_Selection"),(Work_Completed_Selection))
-    pointAndClick((Work_Completed_Selection), 1)
-
-    time.sleep(1.0)
-    pyautogui.press(['down', 'down', 'down', 'down', 'down', 'down', 'tab'])
-    time.sleep(0.5)
+    while MultipleBillbablesSameWorkOrder == True:
     
 
-##    Update_Button_Gray_2 = pyautogui.locateCenterOnScreen("Update_Button_Gray_2.png", grayscale=True)
-##    while Update_Button_Gray_2 == None:
-##        Update_Button_Gray_2 = pyautogui.locateCenterOnScreen("Update_Button_Gray_2.png", grayscale=True)
-##        print("Still searching for Update_Button_Gray_2...")
+        Asset_Label = findImage("Asset_Label") # Makes sure work order page has loaded before proceeding
+        printImageLocation(("Asset_Label"),(Asset_Label))
+        identifySession()
 
-    findImage("Update_Button_Gray_2") 
-    Update_Button_Gray_2 = findImage("Update_Button_Gray_2")
-    printImageLocation(("Update_Button_Gray_2"),(Update_Button_Gray_2))
-    pointAndClick((Update_Button_Gray_2), 1)
+        #scrollDown ()
+        pyautogui.press('pgdn')
 
-##    pyautogui.moveTo(Update_Button_Gray_2)
-##    pyautogui.click(clicks=1)
-    time.sleep(1.2) # changing from 4.0 to 3.0
 
-    forkInTheRoad = " "
-    forkInTheRoad = ConditionalImageSearch("Manager_Review_Alert", "OK_Button_Blue")
-    print(forkInTheRoad)
-    if forkInTheRoad == 5:
-        pass
-    elif forkInTheRoad == 8:
-        continue
+        Work_Order_Itemized_Cost = chooseImage("Work_Order_Itemized_Cost", "Work_Order_Itemized_Cost_HL")
+        printImageLocation(("Work_Order_Itemized_Cost"),(Work_Order_Itemized_Cost))
+        pointAndClick((Work_Order_Itemized_Cost), 1)
+
+
+
+        Exclamation_Point_Icon = findImage("Exclamation_Point_Icon")
+        printImageLocation(("Exclamation_Point_Icon"),(Exclamation_Point_Icon))
+        pointAndClick((Exclamation_Point_Icon), 1)
+        
+        time.sleep(1.9)
+        pointAndClick((895,343), 1)
+
+  
+        Total_Billable_Field = findImage("Total_Billable_Field")
+        printImageLocation(("Total_Billable_Field"),(Total_Billable_Field))
+        pointAndClick((Total_Billable_Field), 2)
+
+
+        pyautogui.hotkey('ctrl', 'a')
+        pyautogui.hotkey('ctrl', 'c')
+        pyautogui.press(['delete', '0','tab', 'tab', 'tab'])
+
+        time.sleep(1.0)
+
+        try:
+            Concession_Amount = float(pyperclip.paste())
+
+
+        except:
+            Concession_Amount = float(pyautogui.prompt(text='Adjust the Total Billable Amount in Agilis and enter the correct amount for concessions here.', title='Type Error' , default='0'))
+            pass
+
+        
+        Total_Concession_Amount += Concession_Amount
+        print("Concession amount is ${:.2f}".format(Concession_Amount))
+        pyperclip.paste()
+        pyautogui.pause = 0.2
+        pyautogui.press(['down', 'down', 'down', 'tab', 'tab', 'down', 'tab'])
+        time.sleep(1.0) 
+
+
+        Update_Button_Gray = findImage("Update_Button_Gray")
+        printImageLocation(("Update_Button_Gray"),(Update_Button_Gray))
+        pointAndClick((Update_Button_Gray), 1)
+
+ 
+        Work_Completed_Selection = findImage("Work_Completed_Selection")
+        printImageLocation(("Work_Completed_Selection"),(Work_Completed_Selection))
+        pointAndClick((Work_Completed_Selection), 1)
+
+        time.sleep(1.0)
+        pyautogui.press(['down', 'down', 'down', 'down', 'down', 'down', 'tab'])
+        time.sleep(0.5)
         
 
-##    for i in range (0,4):
-##        Manager_Review_Alert = pyautogui.locateCenterOnScreen("Manager_Review_Alert.png", grayscale=True)
-##        
-##    if Manager_Review_Alert != None:
-##        Manager_Review_Alert = pyautogui.locateCenterOnScreen("Manager_Review_Alert.png", grayscale=True)
-##        print("Center of Manager_Review_Alert is located at {0}".format(Manager_Review_Alert))
-##        OK_Button_Blue = pyautogui.locateCenterOnScreen("OK_Button_Blue.png", grayscale=True)
-##        time.sleep(2.0)
-##        pyautogui.moveTo(OK_Button_Blue)
-##        pyautogui.click(clicks=1)
-##        
-##    else:
-##        continue
+        Update_Button_Gray_2 = findImage("Update_Button_Gray_2")
+        printImageLocation(("Update_Button_Gray_2"),(Update_Button_Gray_2))
+        pointAndClick((Update_Button_Gray_2), 1)
 
+
+        time.sleep(1.2) 
+
+        forkInTheRoad = " "
+        forkInTheRoad = ConditionalImageSearch("Manager_Review_Alert", "OK_Button_Blue")
+        print(forkInTheRoad)
+        if forkInTheRoad == "Cycle back through this Work Order":
+            MultipleBillbablesSameWorkOrder = True
+            continue 
+        elif forkInTheRoad == "Proceed to next Work Order Session":
+            MultipleBillbablesSameWorkOrder = False
+            break 
+ 
     time.sleep(0.5) 
 
-
-    findImage("Back_Button")
-    Back_Button = findImage("Back_Button")
-    printImageLocation(("Back_Button"),(Back_Button))
-    pointAndClick((Back_Button), 1)
 
     
 phase +=1  ##Phase 3
