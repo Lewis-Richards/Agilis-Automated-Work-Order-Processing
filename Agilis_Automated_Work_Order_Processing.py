@@ -7,8 +7,6 @@
 
 import pyautogui, sys, time, datetime, pyperclip, webbrowser
 
-
-
 phase = 0
 
 def cycle(phase, space = 76, character = "*"):
@@ -156,10 +154,6 @@ cycle(phase)
 Entry_Date = (now.strftime("%m/%d/%Y")) 
 print("Entry Date = " + Entry_Date)
 
-
-
-
-
 pyperclip.copy("") # Clears Clipboard
 promptData = pyautogui.prompt(text='How Many Work Order Update Sessions do you want to run?', title='WORK ORDER COUNT' , default='5') 
 type(promptData)
@@ -292,8 +286,7 @@ while i < WorkOrderCount:
  
     time.sleep(0.5) 
 
-
-    
+   
 phase +=1  ##Phase 3
 cycle(phase)
    
@@ -314,7 +307,6 @@ print("{0} Work Orders were advanced to 'Ready to Post' Status".format(promptDat
 print("{0} Line Items were processed".format(lineItemCycle))
 print("Total Amount Zeroed = ${:.2f}".format(Total_Concession_Amount))
 print(TotalSessionInfo)
-
 
 
 phase +=1  ##Complete
